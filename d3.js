@@ -19,6 +19,7 @@ function visualUp(gender) {
     const filtered = gender === "All" ? data : data.filter(d => d.Gender === gender);
     drawBarChart(filtered);
     drawScatterPlot(filtered);
+    drawLineGraph(filtered);
 }
 // allows for filtering between genders, and draws the bar and scatter plots
 // using the filtered data
@@ -27,9 +28,11 @@ function drawBarChart(data) {
     const svg = bar.append("g")
         .attr("transform", `translate(${mar.left},${mar.top})`);
     const counts = d3.rollup(data, v => v.length, d => d.Depression);
+    const total = d3.sum(counts.values());
     const dataset = Array.from(counts, ([depression, count]) => ({
     label: depression === "1" ? "Depressed" : "Not Depressed",
-    count: count
+    count: count,
+    percentage: (count / total * 100).toFixed(1)
 }));
 // Create a dataset for the bar chart
 const x = d3.scaleBand().domain(dataset.map(d => d.label)).range([0, w]).padding(0.3);
@@ -57,9 +60,66 @@ svg.selectAll("rect")
         .style("top", `${event.pageY - 30}px`);
     })
     .on("mouseout", () => tools.transition().duration(300).style("opacity", 0));
+    // After drawing the bars
+    svg.selectAll(".percentage")
+        .data(dataset)
+        .enter()
+        .append("text")
+        .attr("class", "label")
+        .attr("x", d => x(d.label) + x.bandwidth() / 2)
+        .attr("y", d => y(d.count) - 5) // a little above the bar
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("fill", "#000")
+        .text(d => `${d.percentage}%`);
+
 }
 // Draws the bar chart using the filtered data
 // The bar chart shows the number of people who are depressed and not depressed
+function drawLineGraph(data) {
+    const line = d3.select("#lineGraph");
+    line.selectAll("*").remove();
+    const svg = line.append("g").attr("transform", `translate(${mar.left},${mar.top})`);
+    const ageGroups = d3.rollup(data, v => d3.mean(v, d => +d.Depression), d => Math.floor(+d.Age / 5) * 5);
+    let dataset = Array.from(ageGroups, ([age, avgDepression]) => ({ age, avgDepression }));
+    dataset = dataset.sort((a, b) => a.age - b.age);
+        const x = d3.scaleLinear().domain(d3.extent(dataset, d => d.age)).range([0, w]);
+        const y = d3.scaleLinear().domain([0, 1]).range([h, 0]);
+        svg.append("g").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x)).append("text")
+            .attr("x", w/2)
+            .attr("y", 40)
+            .attr("text-anchor", "middle")
+            .text("Age Group");
+        svg.append("g").call(d3.axisLeft(y)).append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -40)
+            .attr("x", -h/2)
+            .attr("text-anchor", "middle")
+            .text("Depression Rate"); 
+        const lineGen = d3.line()
+            .x(d => x(d.age))
+            .y(d => y(d.avgDepression));
+        svg.append("path")
+            .datum(dataset)
+            .attr("fill", "none")
+            .attr("stroke", "orange")
+            .attr("stroke-width", 2)
+            .attr("d", lineGen);
+        svg.append("text")
+            .attr("x", w/2)
+            .attr("y", -20)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text("Depression Rate by Age Group");
+        svg.selectAll(".dot")
+            .data(dataset)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("cx", d => x(d.age))
+            .attr("cy", d => y(d.avgDepression))
+            .attr("r", 5)
+            .attr("fill", "steelblue");
+}
 function drawScatterPlot(data) {
     scat.selectAll("*").remove();
     const svg = scat.append("g").attr("transform", `translate(${mar.left},${mar.top})`);
@@ -82,7 +142,7 @@ svg.selectAll("circle")
     .append("circle")
     .attr("cx", d => x(d.Hours))
     .attr("cy", d => y(d.Age))
-    .attr("r", 5)
+    .attr("r", 3.5)
     .attr("fill", d => d.Depression === "1" ? "#FFA500" : "#1f77b4")
     .attr("opacity", 0.7)
     .on("mouseover", (event, d) => {
