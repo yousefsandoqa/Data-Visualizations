@@ -27,6 +27,7 @@ label, select {
 .tooltip {
     position: absolute;
     background: rgba(0, 0, 0, 0.7);
+    transition: opacity 0.3s ease;
     color: #fff;
     padding: 5px;
     border-radius: 3px;

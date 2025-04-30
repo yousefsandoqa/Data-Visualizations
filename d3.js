@@ -3,7 +3,8 @@ const tools = d3.select(".tooltip");
 const bar = d3.select("#barChart");
 const scat = d3.select("#scatterPlot");
 const mar = { top: 50, right: 60, bottom: 100, left: 70 };
-const w = 800 - mar.left - mar.right;
+const containerWidth = bar.node().getBoundingClientRect().width;
+const w = containerWidth - mar.left - mar.right;
 const h = 400 - mar.top - mar.bottom;
 let data;
 // Created margins and bar/scatter plot dimensions
@@ -99,12 +100,20 @@ function drawLineGraph(data) {
         const lineGen = d3.line()
             .x(d => x(d.age))
             .y(d => y(d.avgDepression));
-        svg.append("path")
+            const path = svg.append("path")
             .datum(dataset)
             .attr("fill", "none")
             .attr("stroke", "orange")
             .attr("stroke-width", 2)
             .attr("d", lineGen);
+        const totalLength = path.node().getTotalLength();        
+        path
+            .attr("stroke-dasharray", totalLength)
+            .attr("stroke-dashoffset", totalLength)
+            .transition()
+            .duration(10000)
+            .ease(d3.easeLinear)
+            .attr("stroke-dashoffset", 0);
         svg.append("text")
             .attr("x", w/2)
             .attr("y", -20)
@@ -154,23 +163,47 @@ svg.selectAll("circle")
     .on("mouseout", () => tools.transition().duration(300).style("opacity", 0));
 // Draws the scatter plot using the filtered data
 // The scatter plot shows the relationship between age and work/study hours
-svg.append("text")
-    .attr("x", w / 2)
-    .attr("y", h + mar.bottom - 10)
-    .attr("text-anchor", "middle")
-    .text("Work/Study Hours");
-svg.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 0 - mar.left + 20)
-    .attr("x", 0 - (h / 2))
-    .attr("text-anchor", "middle")
-    .text("Age");
-svg.append("text")
-    .attr("x", w / 2)
-    .attr("y", 0 - mar.top / 2)
-    .attr("text-anchor", "middle")
-    .style("font-size", "16px")
-    .text("Scatter Plot of Age vs Work/Study Hours");
+    svg.append("text")
+        .attr("x", w / 2)
+        .attr("y", h + mar.bottom - 10)
+        .attr("text-anchor", "middle")
+        .text("Work/Study Hours");
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 - mar.left + 20)
+        .attr("x", 0 - (h / 2))
+        .attr("text-anchor", "middle")
+        .text("Age");
+    svg.append("text")
+        .attr("x", w / 2)
+        .attr("y", 0 - mar.top / 2)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .text("Scatter Plot of Age vs Work/Study Hours");
+    const legend = svg.append("g")
+        .attr("transform", `translate(${w - 70}, 10)`); 
+    legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", "#FFA500");
+    legend.append("text")
+        .attr("x", 20)
+        .attr("y", 10)
+        .text("Depressed")
+        .attr("alignment-baseline", "middle");
+    legend.append("rect")
+        .attr("x", 0)
+        .attr("y", 20)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", "#1f77b4");
+    legend.append("text")
+        .attr("x", 20)
+        .attr("y", 30)
+        .text("Not Depressed")
+        .attr("alignment-baseline", "middle");
 }
 // Draws the scatter plot using the filtered data
 // The scatter plot shows the relationship between age and work/study hours and depression status
